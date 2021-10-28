@@ -53,7 +53,7 @@ spec:
         service.istio.io/canonical-revision: latest
     spec:
       containers:
-      - image: 835561290198.dkr.ecr.us-east-1.amazonaws.com/mx-istio-demo/mx-istio-demo-capacitacion-demo-test:6
+      - image: 983234829381.dkr.ecr.us-east-1.amazonaws.com/mx-istio-demo/mx-istio-demo-capacitacion-demo-test:6
         imagePullPolicy: Always
         name: mx-istio-demo-capacitacion-demo
         ports:

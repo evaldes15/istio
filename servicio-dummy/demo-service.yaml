@@ -47,7 +47,7 @@ spec:
       containers:
         - name: mx-istio-demo-capacitacion-demo
           imagePullPolicy: Always
-          image: 835561290198.dkr.ecr.us-east-1.amazonaws.com/mx-istio-demo/mx-istio-demo-capacitacion-demo-test:3
+          image: 983234829381.dkr.ecr.us-east-1.amazonaws.com/mx-istio-demo/mx-istio-demo-capacitacion-demo-test:3
           resources:
             requests:
               cpu: 100m

@@ -3,7 +3,7 @@ deployment:
   container:
     namespace: test
     name: <CHARTNAME>
-    repository: "835561290198.dkr.ecr.us-east-1.amazonaws.com/"
+    repository: "983234829381.dkr.ecr.us-east-1.amazonaws.com/"
     image: "mx-istio-demo/<CHARTNAME>"
     tag: "1.0.0"
     pullPolicy: Always
