@@ -1,0 +1,15 @@
+##################################################################################################
+# Create role binding
+##################################################################################################
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: configmap-reader
+  namespace: test
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: configmap-reader
+subjects:
+- kind: ServiceAccount
+  name: default

@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: apis-work
+  namespace: argocd
+spec:
+  generators:
+  - git:
+      repoURL: ssh://git@globaldevtools.istio-demo.com:7999/apis/mx-istio-demo-apis-apps.git
+      revision: work
+      directories:
+      - path: '**/**'
+  template:
+    metadata:
+      name: '{{path.basename}}'
+      #labels:
+      #  environment: test
+    spec:
+      project: work
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+      source:
+        repoURL: ssh://git@globaldevtools.istio-demo.com:7999/apis/mx-istio-demo-apis-apps.git
+        targetRevision: work
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd

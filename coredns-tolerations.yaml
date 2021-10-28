@@ -1,0 +1,13 @@
+# Coredns tolerations
+spec:
+  template:
+    spec:
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        effect: "NoSchedule"
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
+      - key: "api.mkt.nodeType"
+        operator: "Equal"
+        value: "istio"
+        effect: "NoSchedule"

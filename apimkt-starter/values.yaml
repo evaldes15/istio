@@ -1,0 +1,19 @@
+deployment:
+  replicas: 1
+  container:
+    namespace: test
+    name: <CHARTNAME>
+    repository: "835561290198.dkr.ecr.us-east-1.amazonaws.com/"
+    image: "mx-istio-demo/<CHARTNAME>"
+    tag: "1.0.0"
+    pullPolicy: Always
+    containerPort: 8080
+    cpuReq: 100
+    memReq: 100
+    cpiLim: 100
+    memLim: 100
+    
+service:
+  protocol: TCP
+  targetPort: 8080
+  port: 80

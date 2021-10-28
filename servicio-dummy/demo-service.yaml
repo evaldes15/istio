@@ -1,0 +1,105 @@
+##################################################################################################
+# Service section
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: mx-istio-demo-capacitacion-demo
+  namespace: test
+  labels:
+    app: mx-istio-demo-capacitacion-demo
+    service: mx-istio-demo-capacitacion-demo
+spec:
+  ports:
+    - port: 90
+      targetPort: 8080
+      name: http
+  selector:
+    app: mx-istio-demo-capacitacion-demo
+---
+##################################################################################################
+## Deployment section                                                                            ##
+##################################################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mx-istio-demo-capacitacion-demo
+  namespace: test
+  annotations:
+    configmap.reloader.stakater.com/reload: "mx-istio-demo-configmap-base,mx-istio-demo-capacitacion-demo-config"
+  labels:
+    app: mx-istio-demo-capacitacion-demo
+    release: stable
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mx-istio-demo-capacitacion-demo
+  template:
+    metadata:
+      labels:
+        app: mx-istio-demo-capacitacion-demo
+        release: live
+    spec:
+      securityContext:
+        runAsUser: 2000
+        fsGroup: 2000
+      containers:
+        - name: mx-istio-demo-capacitacion-demo
+          imagePullPolicy: Always
+          image: 835561290198.dkr.ecr.us-east-1.amazonaws.com/mx-istio-demo/mx-istio-demo-capacitacion-demo-test:3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 100m
+              memory: 100Mi
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+          - name: logs
+            mountPath: /var/log/api-market
+      tolerations:
+      - key: "api.mkt.nodeType"
+        operator: "Equal"
+        value: "test"
+        effect: "NoSchedule"
+      initContainers:
+      - name: mx-istio-demo-capacitacion-demo-init
+        securityContext:
+          runAsUser: 0
+        image: busybox
+        command: ["/bin/chmod", "-R", "777", "/var/log/api-market"]
+        volumeMounts:
+        - name: logs
+          mountPath: /var/log/api-market
+      volumes:
+        - name: logs
+          hostPath:
+            path: /var/log/api-market
+---
+##################################################################################################
+## Virtual service                                                                          ##
+##################################################################################################
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  namespace: test
+  name: mx-istio-demo-capacitacion-demo
+spec:
+  gateways: 
+  - istio-system/main-gateway
+  hosts:
+  - "*" 
+  http:
+  - match:
+    - method:
+        exact: POST
+      uri:
+        exact: /api/v1/capacitacion
+    route:
+      - destination:
+          host: mx-istio-demo-capacitacion-demo
+          port: 
+            number: 90

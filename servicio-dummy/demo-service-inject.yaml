@@ -1,0 +1,308 @@
+##################################################################################################
+# Service section
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: mx-istio-demo-capacitacion-demo
+  namespace: test
+  labels:
+    app: mx-istio-demo-capacitacion-demo
+    service: mx-istio-demo-capacitacion-demo
+spec:
+  ports:
+    - port: 90
+      targetPort: 8080
+      name: http
+  selector:
+    app: mx-istio-demo-capacitacion-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    configmap.reloader.stakater.com/reload: mx-istio-demo-configmap-base,mx-istio-demo-capacitacion-demo
+  creationTimestamp: null
+  labels:
+    app: mx-istio-demo-capacitacion-demo
+    release: stable
+  name: mx-istio-demo-capacitacion-demo
+  namespace: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mx-istio-demo-capacitacion-demo
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: mx-istio-demo-capacitacion-demo
+        kubectl.kubernetes.io/default-logs-container: mx-istio-demo-capacitacion-demo
+        prometheus.io/path: /stats/prometheus
+        prometheus.io/port: "15020"
+        prometheus.io/scrape: "true"
+        sidecar.istio.io/status: '{"initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-data","istio-podinfo","istio-token","istiod-ca-cert"],"imagePullSecrets":null}'
+      creationTimestamp: null
+      labels:
+        app: mx-istio-demo-capacitacion-demo
+        istio.io/rev: default
+        release: live
+        security.istio.io/tlsMode: istio
+        service.istio.io/canonical-name: mx-istio-demo-capacitacion-demo
+        service.istio.io/canonical-revision: latest
+    spec:
+      containers:
+      - image: 835561290198.dkr.ecr.us-east-1.amazonaws.com/mx-istio-demo/mx-istio-demo-capacitacion-demo-test:6
+        imagePullPolicy: Always
+        name: mx-istio-demo-capacitacion-demo
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - mountPath: /var/log/api-market
+          name: logs
+      - args:
+        - proxy
+        - sidecar
+        - --domain
+        - $(POD_NAMESPACE).svc.cluster.local
+        - --serviceCluster
+        - mx-istio-demo-capacitacion-demo.$(POD_NAMESPACE)
+        - --proxyLogLevel=warning
+        - --proxyComponentLogLevel=misc:error
+        - --log_output_level=default:info
+        - --concurrency
+        - "2"
+        env:
+        - name: JWT_POLICY
+          value: third-party-jwt
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: CA_ADDR
+          value: istiod.istio-system.svc:15012
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: CANONICAL_SERVICE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['service.istio.io/canonical-name']
+        - name: CANONICAL_REVISION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['service.istio.io/canonical-revision']
+        - name: PROXY_CONFIG
+          value: |
+            {}
+        - name: ISTIO_META_POD_PORTS
+          value: |-
+            [
+                {"containerPort":8080}
+            ]
+        - name: ISTIO_META_APP_CONTAINERS
+          value: mx-istio-demo-capacitacion-demo
+        - name: ISTIO_META_CLUSTER_ID
+          value: Kubernetes
+        - name: ISTIO_META_INTERCEPTION_MODE
+          value: REDIRECT
+        - name: ISTIO_META_WORKLOAD_NAME
+          value: mx-istio-demo-capacitacion-demo
+        - name: ISTIO_META_OWNER
+          value: kubernetes://apis/apps/v1/namespaces/test/deployments/mx-istio-demo-capacitacion-demo
+        - name: ISTIO_META_MESH_ID
+          value: cluster.local
+        - name: TRUST_DOMAIN
+          value: cluster.local
+        image: docker.io/istio/proxyv2:1.10.2
+        name: istio-proxy
+        ports:
+        - containerPort: 15090
+          name: http-envoy-prom
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+          initialDelaySeconds: 1
+          periodSeconds: 2
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
+        volumeMounts:
+        - mountPath: /var/run/secrets/istio
+          name: istiod-ca-cert
+        - mountPath: /var/lib/istio/data
+          name: istio-data
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
+        - mountPath: /var/run/secrets/tokens
+          name: istio-token
+        - mountPath: /etc/istio/pod
+          name: istio-podinfo
+      initContainers:
+      - command:
+        - /bin/chmod
+        - -R
+        - "777"
+        - /var/log/api-market
+        image: busybox
+        name: mx-istio-demo-capacitacion-demo-init
+        resources: {}
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /var/log/api-market
+          name: logs
+      - args:
+        - istio-iptables
+        - -p
+        - "15001"
+        - -z
+        - "15006"
+        - -u
+        - "1337"
+        - -m
+        - REDIRECT
+        - -i
+        - '*'
+        - -x
+        - ""
+        - -b
+        - '*'
+        - -d
+        - 15090,15021,15020
+        image: docker.io/istio/proxyv2:1.10.2
+        name: istio-init
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+      securityContext:
+        fsGroup: 1337
+        runAsUser: 2000
+      tolerations:
+      - effect: NoSchedule
+        key: api.mkt.nodeType
+        operator: Equal
+        value: test
+      volumes:
+      - emptyDir:
+          medium: Memory
+        name: istio-envoy
+      - emptyDir: {}
+        name: istio-data
+      - downwardAPI:
+          items:
+          - fieldRef:
+              fieldPath: metadata.labels
+            path: labels
+          - fieldRef:
+              fieldPath: metadata.annotations
+            path: annotations
+          - path: cpu-limit
+            resourceFieldRef:
+              containerName: istio-proxy
+              divisor: 1m
+              resource: limits.cpu
+          - path: cpu-request
+            resourceFieldRef:
+              containerName: istio-proxy
+              divisor: 1m
+              resource: requests.cpu
+        name: istio-podinfo
+      - name: istio-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              audience: istio-ca
+              expirationSeconds: 43200
+              path: istio-token
+      - configMap:
+          name: istio-ca-root-cert
+        name: istiod-ca-cert
+      - hostPath:
+          path: /var/log/api-market
+        name: logs
+status: {}
+---
+##################################################################################################
+## Virtual service                                                                          ##
+##################################################################################################
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  namespace: test
+  name: mx-istio-demo-capacitacion-demo
+spec:
+  gateways: 
+  - istio-system/main-gateway
+  hosts:
+  - "*" 
+  http:
+  - match:
+    - method:
+        exact: POST
+      uri:
+        exact: /api/v1/capacitacion
+    route:
+      - destination:
+          host: mx-istio-demo-capacitacion-demo
+          port: 
+            number: 90
+---

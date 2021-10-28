@@ -1,0 +1,17 @@
+##################################################################################################
+## Mongo Volume Claim                                                                           ##
+##################################################################################################
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: storage
+  name: mongo-storage
+  labels:
+    app: mongo
+spec:
+  storageClassName: encrypted-gp2
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mx-istio-demo-capacitacion-demo
+  namespace: test
+data:
+  application.properties: |-
+    cons.demo-mensaje=msj
+    cons.uri=/notifications
+    cons.mensaje=demo-mensaje-configuracion-configmap-editado

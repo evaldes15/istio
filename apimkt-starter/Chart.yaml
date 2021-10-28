@@ -1,0 +1,11 @@
+apiVersion: v2
+name: <CHARTNAME>
+description: Starter for <CHARTNAME> service
+type: application
+version: 1.0.0
+appVersion: 1.0.0
+maintainers:
+  - name: Giardino
+    email: arturo.isunza.contractor@istio-demo.com
+keywords:
+  - API-SERVICES

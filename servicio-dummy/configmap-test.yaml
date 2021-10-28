@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mx-istio-demo-configmap-base
+  namespace: test
+data:
+  application.properties: |-
+    cons.time-out=${time-out}
+    # LOAD CONFIGURATION PROPERTIES FROM VAULT
+    quarkus.vault.url=http://vault.vault:8200
+    quarkus.vault.kv-secret-engine-version=1
+    quarkus.vault.kv-secret-engine-mount-path=istio-demo.appid/
+    quarkus.vault.secret-config-kv-path=test-properties
+    quarkus.vault.authentication.app-role.role-id=d4027
+    quarkus.vault.authentication.app-role.secret-id=231212
+    # VARIABLES DE CONEXION A MONGO
+    quarkus.mongodb.hosts=${mongo-db-host}
+    quarkus.mongodb.database=${mongo-db-collection}
+    quarkus.mongodb.credentials.username=${mongo-db-user}
+    quarkus.mongodb.credentials.password=${mongo-db-pass}
+    quarkus.mongodb.credentials.auth-source=${mongo-db-auth}
+    # FORMATO DE LOGG DEFINIDO
+    quarkus.log.console.format=%d{yyyy-MM-dd'T'HH:mm:ss.SSS} %-4r [%t] %-5p %c - %m %n

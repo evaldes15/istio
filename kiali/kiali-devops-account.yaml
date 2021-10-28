@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mx-work-devops-apis
+  namespace: istio-system
+---
+##################################################################################################
+# Create role bindings
+##################################################################################################
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mx-work-devops-apis-sys
+  namespace: istio-system
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: kiali
+subjects:
+- kind: ServiceAccount
+  name: mx-work-devops-apis
+  namespace: istio-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mx-work-devops-apis-dev
+  namespace: dev
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: kiali
+subjects:
+- kind: ServiceAccount
+  name: mx-work-devops-apis
+  namespace: istio-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mx-work-devops-apis-test
+  namespace: test
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: kiali
+subjects:
+- kind: ServiceAccount
+  name: mx-work-devops-apis
+  namespace: istio-system
+---

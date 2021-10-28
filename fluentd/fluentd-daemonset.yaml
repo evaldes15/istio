@@ -1,0 +1,370 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: fluentd-logging
+  name: fluentd
+  namespace: fluentd
+spec:
+  selector:
+    matchLabels:
+      name: fluentd
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: fluentd
+        kubectl.kubernetes.io/default-logs-container: fluentd
+        prometheus.io/path: /stats/prometheus
+        prometheus.io/port: "15020"
+        prometheus.io/scrape: "true"
+        sidecar.istio.io/status: '{"initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-data","istio-podinfo","istio-token","istiod-ca-cert"],"imagePullSecrets":null}'
+      creationTimestamp: null
+      labels:
+        istio.io/rev: default
+        name: fluentd
+        security.istio.io/tlsMode: istio
+        service.istio.io/canonical-name: fluentd
+        service.istio.io/canonical-revision: latest
+    spec:
+      containers:
+      - image: 835561290198.dkr.ecr.us-east-1.amazonaws.com/mx-istio-demo/mx-istio-demo-infr-fluentd-work:23
+        imagePullPolicy: Always
+        name: fluentd
+        resources:
+          limits:
+            cpu: 100m
+            memory: 230Mi
+          requests:
+            cpu: 100m
+            memory: 230Mi
+        volumeMounts:
+        - mountPath: /var/log
+          name: varlog
+        - mountPath: /var/lib/docker/containers
+          name: varlibdockercontainers
+          readOnly: true
+        - mountPath: /etc/fluent/config.d
+          name: config-volume
+      - args:
+        - proxy
+        - sidecar
+        - --domain
+        - $(POD_NAMESPACE).svc.cluster.local
+        - --serviceCluster
+        - fluentd.fluentd
+        - --proxyLogLevel=warning
+        - --proxyComponentLogLevel=misc:error
+        - --log_output_level=default:info
+        - --concurrency
+        - "2"
+        env:
+        - name: JWT_POLICY
+          value: third-party-jwt
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: CA_ADDR
+          value: istiod.istio-system.svc:15012
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: CANONICAL_SERVICE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['service.istio.io/canonical-name']
+        - name: CANONICAL_REVISION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['service.istio.io/canonical-revision']
+        - name: PROXY_CONFIG
+          value: |
+            {}
+        - name: ISTIO_META_POD_PORTS
+          value: |-
+            [
+            ]
+        - name: ISTIO_META_APP_CONTAINERS
+          value: fluentd
+        - name: ISTIO_META_CLUSTER_ID
+          value: Kubernetes
+        - name: ISTIO_META_INTERCEPTION_MODE
+          value: REDIRECT
+        - name: ISTIO_META_WORKLOAD_NAME
+          value: fluentd
+        - name: ISTIO_META_OWNER
+          value: kubernetes://apis/apps/v1/namespaces/fluentd/daemonsets/fluentd
+        - name: ISTIO_META_MESH_ID
+          value: cluster.local
+        - name: TRUST_DOMAIN
+          value: cluster.local
+        image: docker.io/istio/proxyv2:1.10.2
+        name: istio-proxy
+        ports:
+        - containerPort: 15090
+          name: http-envoy-prom
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+          initialDelaySeconds: 1
+          periodSeconds: 2
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
+        volumeMounts:
+        - mountPath: /var/run/secrets/istio
+          name: istiod-ca-cert
+        - mountPath: /var/lib/istio/data
+          name: istio-data
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
+        - mountPath: /var/run/secrets/tokens
+          name: istio-token
+        - mountPath: /etc/istio/pod
+          name: istio-podinfo
+      initContainers:
+      - args:
+        - istio-iptables
+        - -p
+        - "15001"
+        - -z
+        - "15006"
+        - -u
+        - "1337"
+        - -m
+        - REDIRECT
+        - -i
+        - '*'
+        - -x
+        - ""
+        - -b
+        - '*'
+        - -d
+        - 15090,15021,15020
+        image: docker.io/istio/proxyv2:1.10.2
+        name: istio-init
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+      securityContext:
+        fsGroup: 1337
+      terminationGracePeriodSeconds: 20
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      - key: "api.mkt.nodeType"
+        operator: "Equal"
+        value: "dev"
+        effect: "NoSchedule"
+      - key: "api.mkt.nodeType"
+        operator: "Equal"
+        value: "test"
+        effect: "NoSchedule"
+      - key: "api.mkt.nodeType"
+        operator: "Equal"
+        value: "qa"
+        effect: "NoSchedule"
+      volumes:
+      - emptyDir:
+          medium: Memory
+        name: istio-envoy
+      - emptyDir: {}
+        name: istio-data
+      - downwardAPI:
+          items:
+          - fieldRef:
+              fieldPath: metadata.labels
+            path: labels
+          - fieldRef:
+              fieldPath: metadata.annotations
+            path: annotations
+          - path: cpu-limit
+            resourceFieldRef:
+              containerName: istio-proxy
+              divisor: 1m
+              resource: limits.cpu
+          - path: cpu-request
+            resourceFieldRef:
+              containerName: istio-proxy
+              divisor: 1m
+              resource: requests.cpu
+        name: istio-podinfo
+      - name: istio-token
+        projected:
+          sources:
+          - serviceAccountToken:
+              audience: istio-ca
+              expirationSeconds: 43200
+              path: istio-token
+      - configMap:
+          name: istio-ca-root-cert
+        name: istiod-ca-cert
+      - hostPath:
+          path: /var/log
+        name: varlog
+      - hostPath:
+          path: /var/lib/docker/containers
+        name: varlibdockercontainers
+      - configMap:
+          name: fluentd-es-config
+        name: config-volume
+  updateStrategy: {}
+status:
+  currentNumberScheduled: 0
+  desiredNumberScheduled: 0
+  numberMisscheduled: 0
+  numberReady: 0
+---
+##################################################################################################
+# Fluentd ConfigMap
+##################################################################################################
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-es-config
+  namespace: fluentd
+data:
+  forward.input.conf: |-
+    # Takes the messages sent over TCP
+    <source>
+      @type http
+      port 9880
+      bind 0.0.0.0
+    </source>
+    # Takes the logs Tail the kubernetes files
+    <source>
+      @type tail
+      path /var/log/containers/*mx-istio-demo*.log
+      exclude_path ["/var/log/containers/*init*.log","/var/log/containers/*proxy*.log"]
+      pos_file /var/log/fluentd-containers.log.pos    
+      <parse>
+        @type none
+      </parse>
+      read_from_head true
+      tag demo.*
+    </source>
+  output.conf: |-
+    # Format logs into valid json structure
+    <filter **.mx-istio-demo**>
+      @type parse_log
+    </filter>
+    # Match only the logs from files of microservices cointainers
+    <match **.mx-istio-demo**>
+      @type rewrite_tag_filter
+      <rule>
+        key aspectType
+        pattern /^.*(backendService|apiService).*$/
+        tag apis.monitoring
+      </rule>
+      <rule>
+        key descripcion
+        pattern /^.*$/
+        tag error.collection
+      </rule>
+    </match>
+    # Emit events for elastic
+    <match apis.monitoring>
+      @type copy
+      <store>
+        @type relabel
+        @label @elasticcluster
+      </store>    
+    </match>
+    # Send logs to Elasticsearch
+    <label @elasticcluster>
+      <filter apis.monitoring>
+        @type record_transformer
+        remove_keys mrId,level,traceId,spanId,creationDate,finishDate,parentSpan,aap,consumerName,businessFlow,uri
+      </filter>
+      <match  apis.monitoring>
+        @type elasticsearch
+        @log_level debug
+        include_tag_key true
+        host 10.1.1.1
+        port 9200
+        user d2d2ewdwdwd
+        password sas321ew123
+        logstash_format true
+        reload_connections false
+        reconnect_on_error true
+        reload_on_failure true
+        <buffer>
+          @type memory
+          flush_interval 3s
+          retry_type periodic
+          retry_forever true
+          retry_wait 60s
+          flush_thread_count 2
+        </buffer>
+      </match>
+    </label>    
+    # Push logs to MongoDB
+    <match error.collection>
+      @type mongo
+      host mongo.storage
+      port 27017
+      database ErrorCollection
+      collection ErrorCollection
+      user fluentd
+      password "ws23sddd"
+      <buffer>
+        @type memory
+        flush_interval 10s
+        retry_type periodic
+        retry_forever true
+        retry_wait 120s
+        flush_thread_count 2
+      </buffer>
+    </match>
+---

@@ -1,0 +1,5 @@
+# Create istio-system namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system

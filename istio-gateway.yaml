@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: main-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - kiali.istio-demo.net
+    - argocd.istio-demo.net
+    - vault.istio-demo.net
+    - mongo.istio-demo.net
+    port:
+      number: 80
+      name: http
+      protocol: HTTP
+  - hosts:
+    - apis-istio-demo.net
+    port:
+      name: https
+      number: 443
+      protocol: HTTPS
+    tls:
+      minProtocolVersion: TLSV1_2
+      mode: SIMPLE
+      privateKey: /etc/istio/ingressgateway-certs/tls.key
+      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt

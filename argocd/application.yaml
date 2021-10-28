@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  namespace: argocd
+  name: mx-istio-demo-capacitacion-demo-test
+spec:
+  destination:
+    name: ''
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  source:
+    path: test/mx-istio-demo-capacitacion-demo-test
+    repoURL: ssh://git@globaldevtools.istio-demo.com:7999/apis/mx-istio-demo-apis-apps.git
+    targetRevision: work
+  project: work
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
